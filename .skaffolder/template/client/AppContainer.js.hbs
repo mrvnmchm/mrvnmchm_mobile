@@ -1,0 +1,62 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "oneTime",
+    "overwrite": false,
+    "_partials": [
+        {
+            "name": "Partial Routes",
+            "tagFrom": "/* START MY SCREENS */",
+            "tagTo": "/* END MY SCREENS */",
+            "template": "{{#each modules}}{{#notHome name}}\n    {{capitalize name}}: { screen: {{capitalize name}} },{{/notHome}}{{/each}}\n    \n    "
+        },
+        {
+            "name": "Partial import",
+            "tagFrom": "/* START MY SCREENS IMPORT */",
+            "tagTo": "/* END MY SCREENS IMPORT */",
+            "template": "\n{{#distinctModules modules}}{{#notHome name}}import {{capitalize name}} from \"./Screen/{{capitalize name}}\";\n{{/notHome}}{{/distinctModules}}"
+        }
+    ]
+}
+**** END PROPERTIES SKAFFOLDER ****
+// Dependencies
+import React, { Component } from "react";
+import { createAppContainer, createStackNavigator } from "react-navigation";
+
+// Screens
+import LoginScreen from "./Screen/LoginScreen";
+import Home from "./Screen/Home";
+import Profile from "./Screen/Profile";
+import ChangePwd from "./Screen/ChangePwd";
+
+/* START MY SCREENS IMPORT */
+/* END MY SCREENS IMPORT */
+
+class AppContainer extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    const AppNavigator = createStackNavigator(
+      {
+        Login: { screen: LoginScreen },
+        Home: { screen: Home },
+        Profile: { screen: Profile },
+        ChangePwd: { screen: ChangePwd },
+
+        /* START MY SCREENS */
+        /* END MY SCREENS */
+      },
+      {
+        initialRouteName: this.props.user ? "Home" : "Login",
+        headerMode: "none"
+      }
+    );
+
+    const AppContainerRouter = createAppContainer(AppNavigator);
+
+    return <AppContainerRouter />;
+  }
+}
+
+export default AppContainer;

@@ -1,0 +1,196 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "oneTime",
+    "overwrite": false,
+    "_partials": []
+}
+**** END PROPERTIES SKAFFOLDER ****
+import React from "react";
+import {
+  Container,
+  Header,
+  Button,
+  Text,
+  Body,
+  Form,
+  Item as FormItem,
+  Input,
+  Label,
+  Title,
+  Card,
+  CardItem
+} from "native-base";
+import { StyleSheet } from "react-native";
+import { AsyncStorage } from "react-native";
+import SecurityService from "../security/SecurityService";
+import crypto from "js-sha3";
+
+// Redux
+import PropTypes from "prop-types";
+import { bindActionCreators } from "redux";
+import { connect } from "react-redux";
+import UserActions from "../redux/actions/UserActions";
+
+class LoginScreen extends React.Component {
+  // Init component state
+  constructor(props) {
+    super(props);
+    this.state = {
+      login: {
+        username: "admin",
+        password: "pass",
+        remember: true
+      },
+      showError: false
+    };
+  }
+
+  // Check error message
+  componentWillMount() {
+    this.props.navigation.addListener("didFocus", () => {
+      let error = this.props.navigation.getParam("showError");
+
+      if (error) {
+        this.setState({ showError: error });
+      } else {
+        this.setState({ showError: false });
+      }
+    });
+  }
+
+  // Login
+  async login() {
+    var comp = this;
+    comp.setState({ showError: false });
+
+    this.props.actions
+      .login(
+        this.state.login.username,
+        crypto.sha3_512(this.state.login.password)
+      )
+      .then(async res => {
+        if (comp.props.user && comp.props.user.token) {
+          // Set header
+          await AsyncStorage.setItem("user", JSON.stringify(comp.props.user));
+          await SecurityService.setAuthorization();
+          comp.props.navigation.navigate("Home");
+        } else {
+          comp.setState({ showError: "Login Fail" });
+        }
+      });
+  }
+
+  render() {
+    return (
+      <Container>
+        <Header>
+          <Body>
+            <Title>Welcome</Title>
+          </Body>
+        </Header>
+        <Card style={styles.card}>
+          <CardItem>
+            <Body>
+              <Text>
+                Default username:
+                <Text style={styles.bold}> admin</Text>
+              </Text>
+              <Text>
+                Default password:
+                <Text style={styles.bold}> pass</Text>
+              </Text>
+            </Body>
+          </CardItem>
+        </Card>
+        <Form>
+          <FormItem floatingLabel>
+            <Label>Username</Label>
+            <Input
+              onChangeText={value =>
+                this.setState(
+                  Object.assign(this.state.login, { username: value })
+                )
+              }
+              value={
+                this.state.login.username &&
+                this.state.login.username.toString()
+              }
+            />
+          </FormItem>
+          <FormItem floatingLabel last>
+            <Label>Password</Label>
+            <Input
+              secureTextEntry={true}
+              onChangeText={value =>
+                this.setState(
+                  Object.assign(this.state.login, { password: value })
+                )
+              }
+              value={
+                this.state.login.password &&
+                this.state.login.password.toString()
+              }
+            />
+          </FormItem>
+
+          <Button
+            full
+            primary
+            style={styles.buttonLogin}
+            onPress={this.login.bind(this)}
+          >
+            <Text> Login </Text>
+          </Button>
+
+          {this.state.showError && (
+            <Text style={styles.errorLogin}>{this.state.showError}</Text>
+          )}
+        </Form>
+      </Container>
+    );
+  }
+}
+
+// Store actions
+const mapDispatchToProps = function(dispatch) {
+  return {
+    actions: bindActionCreators(UserActions, dispatch)
+  };
+};
+
+// Validate types
+LoginScreen.propTypes = {
+  actions: PropTypes.object.isRequired
+};
+
+// Get props from state
+function mapStateToProps(state, ownProps) {
+  return {
+    user: state.LoginReducer.user
+  };
+}
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(LoginScreen);
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 5
+  },
+  bold: {
+    fontWeight: "bold"
+  },
+  buttonLogin: {
+    color: "blue",
+    marginTop: 30
+  },
+  errorLogin: {
+    marginTop: 30,
+    textAlign: "center",
+    color: "white",
+    backgroundColor: "red",
+    padding: 10
+  }
+});

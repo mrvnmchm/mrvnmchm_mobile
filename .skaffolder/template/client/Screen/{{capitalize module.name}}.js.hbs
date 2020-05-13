@@ -1,0 +1,178 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "module",
+    "overwrite": false,
+    "_partials": [
+        {
+            "name": "Partial Comment",
+            "tagFrom": "/** IMPORT MODULE DETAIL",
+            "tagTo": "END IMPORT MODULE DETAIL **/",
+            "template": "\n\n\tModule : \t{{module.name}}\n\t\n\tLinks : \t{{#each module._links}}{{name}}\n\t\t\t\t\t{{url}}\n.\t\t\t\t{{/each}}\n\t\n\tNesteds : \t{{#each module._nesteds}}{{name}}\n\t\t\t\t\t{{url}}\n.\t\t\t\t{{/each}}\n\t\t\t\t\n"
+        },
+        {
+            "name": "Partial import",
+            "tagFrom": "// START IMPORT ACTIONS",
+            "tagTo": "// END IMPORT ACTIONS",
+            "template": "{{#eachResource module._services}}{{#notEqual name 'User'}}import {{capitalize name }}Actions from \"../redux/actions/{{capitalize name}}Actions\";\n{{/notEqual}}{{/eachResource}}"
+        },
+        {
+            "template": "{{#notEmpty module._services}}{{#each module._services}}\n* actions{{capitalize _resource.name}}.{{name}}{{#notEmpty description}}\n*\t@description {{description}}{{/notEmpty}}{{#each _params}}\n*\t@param {{type}} {{name}}{{#notEmpty description}} - {{description}}{{/notEmpty}}{{/each}}{{#notEmpty returnType}}\n*\t@returns {{returnType}}{{/notEmpty}}\n*{{/each}}\n{{/notEmpty}}",
+            "tagTo": "**/",
+            "tagFrom": "/** APIs",
+            "name": "Partial used service"
+        },
+        {
+            "template": "{{#notEmpty module._resources}}/*{{#each module._resources}}\n * {{name}}Service{{/each}}\n */{{/notEmpty}}",
+            "tagTo": "// END - REQUIRED RESOURCES",
+            "tagFrom": "// START - REQUIRED RESOURCES",
+            "name": "Partial required resources"
+        }
+    ]
+}
+**** END PROPERTIES SKAFFOLDER ****
+import React from "react";
+import Sidebar from "../components/SideBar";
+import {
+  Container,
+  Content,
+  List,
+  ListItem,
+  Icon,
+  Right,
+  Left,
+  Header,
+  Body,
+  Title,
+  Drawer,
+  Button,
+  Text
+} from "native-base";{{#notNull module._roles}}
+import SecurityService from "../security/SecurityService";{{/notNull}}
+
+// Redux
+import PropTypes from "prop-types";
+import { bindActionCreators } from "redux";
+import { connect } from "react-redux";
+
+// Custom Actions
+import UserActions from "../redux/actions/UserActions";
+
+// START IMPORT ACTIONS
+// END IMPORT ACTIONS
+
+/** APIs
+**/
+
+class {{capitalize module.name}} extends React.Component {
+  
+  constructor(props) {
+    super(props);
+    this.state = { {{#notNull module._roles}}authorized: false{{/notNull}} };
+  }
+
+  componentWillMount() {
+    {{#notNull module._roles}}
+
+    this.props.navigation.addListener("willFocus", async () => {
+      // Check security
+      if (await SecurityService.isAuth([ {{#each _roles}}'{{name}}',{{/each}} ])) {
+        this.setState({ authorized: true });
+      } else {
+        this.props.navigation.navigate("Login", {
+          showError: "Not authorized"
+        });
+      }
+    });
+
+    {{/notNull}}
+    // Close drawer on close
+    this.props.navigation.addListener("didBlur", () => {
+      if (this._drawer) this._drawer._root.close();
+    });
+  }
+
+  static navigationOptions = {
+    gesturesEnabled: false,
+    swipeEnabled: false
+  };
+
+  closeDrawer() {
+    this._drawer._root.close();
+  }
+
+  openDrawer() {
+    this._drawer._root.open();
+  }
+  
+  render() { {{#notNull module._roles}}
+
+    // Check security
+    if (!this.state.authorized) {
+      return null;
+    }
+    {{/notNull}}
+
+    return (
+      <Drawer
+        ref={ref => {
+          this._drawer = ref;
+        }}
+        // content={<Sidebar />}
+        content={<Sidebar navigation={this.props.navigation} />}
+        onClose={() => this.closeDrawer()}
+      >
+        <Container>
+          <Header>
+            <Left>
+              <Button transparent>
+                <Icon name="menu" onPress={() => this.openDrawer()} />
+              </Button>
+            </Left>
+            <Body>
+              <Title>{{capitalize module.name}}</Title>
+            </Body>
+            <Right />
+          </Header>
+          <Content>
+            <List> {{#each module._links}}
+              <ListItem noIndent onPress={() => this.props.navigation.navigate("{{capitalize name}}")}>
+                <Left>
+                  <Text>{{#equal ../module.name "Home"}}List {{replace name "List" ""}}{{/equal}}{{#notEqual ../module.name "Home"}}{{capitalize name}}{{/notEqual}}</Text>
+                </Left>
+                <Right>
+                  <Icon name="arrow-forward" />
+                </Right>
+              </ListItem>{{/each}}
+            </List>
+          </Content>
+        </Container>
+      </Drawer>
+    );
+  }
+}
+
+// Store actions
+const mapDispatchToProps = function(dispatch) {
+  return { 
+    actionsUser: bindActionCreators(UserActions, dispatch){{#eachResource module._services}}{{#notEqual name 'User'}},
+    actions{{capitalize name}}: bindActionCreators({{capitalize name}}Actions, dispatch){{/notEqual}}{{/eachResource}}
+  };
+};
+
+// Validate types
+{{capitalize module.name}}.propTypes = {
+  actionsUser: PropTypes.object.isRequired{{#eachResource module._services}}{{#notEqual name 'User'}},
+  actions{{capitalize name}}: PropTypes.object.isRequired{{/notEqual}}{{/eachResource}}
+};
+
+// Get props from state
+function mapStateToProps(state, ownProps) {
+  return {
+    user: state.LoginReducer.user
+  };
+}
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)({{capitalize module.name}});
